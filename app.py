@@ -780,10 +780,15 @@ elif page == "Audit Trail":
 
     conn = get_conn()
     df_log = pd.read_sql_query(
-        "SELECT action_time, user_role, action_type, employee_id, detail 
-         FROM audit_log ORDER BY action_time DESC",
+        """
+        SELECT action_time, user_role, action_type, employee_id, detail
+        FROM audit_log
+        WHERE action_type != 'INSERT_DUMMY'
+        ORDER BY action_time DESC
+        """,
         conn,
     )
+
 
 
     if df_log.empty:
@@ -890,6 +895,7 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
 
 
 
