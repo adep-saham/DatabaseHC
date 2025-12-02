@@ -3,6 +3,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime, date
+import random
 
 # =========================================================
 # CONFIG
@@ -156,6 +157,7 @@ page = st.sidebar.radio(
     "Pilih menu",
     [
         "Input / Update Data Pegawai",
+        "Generate Dummy Data (100)",
         "Daftar Pegawai & Screening Kandidat",
         "Audit Trail",
         "Data Quality Dashboard",
@@ -385,6 +387,107 @@ if page == "Input / Update Data Pegawai":
             f"Skor kualitas data: **{dq_score:.0f}/100** | "
             f"Kandidat Bureau Head: **{'YA' if candidate_flag else 'TIDAK'}**"
         )
+
+
+# =========================================================
+# PAGE – GENERATE 100 DUMMY DATA
+# =========================================================
+elif page == "Generate Dummy Data (100)":
+    st.subheader("🤖 Generate 100 Dummy Data Pegawai")
+
+    st.warning(
+        "Aksi ini akan **menghapus seluruh data pegawai yang ada** kemudian mengisi ulang "
+        "dengan 100 data dummy untuk keperluan simulasi."
+    )
+
+    if not check_edit_permission():
+        st.stop()
+
+    if st.button("🚀 Hapus & Generate 100 Dummy Pegawai"):
+        conn = get_conn()
+        cur = conn.cursor()
+
+        # Hapus semua data existing
+        cur.execute("DELETE FROM employees")
+        conn.commit()
+
+        names = ["Ari", "Budi", "Citra", "Dewa", "Elsa", "Fikri", "Gita", "Hana", "Indra", "Joko"]
+        lastnames = ["Pratama", "Wibowo", "Santoso", "Saputra", "Wijaya", "Firmansyah", "Putri"]
+
+        depts = ["Corporate Services", "Finance", "Internal Audit", "Operations", "HC System"]
+        bureaus = ["IT Governance", "HC Data Management", "Payroll", "Recruitment", "Training"]
+
+        for i in range(1, 101):
+            emp_id = f"EMP{i:03d}"
+            full = f"{random.choice(names)} {random.choice(lastnames)}"
+            dept = random.choice(depts)
+            bur = random.choice(bureaus)
+            job = random.choice(["Officer", "Analyst", "Senior Analyst", "Supervisor", "Manager"])
+            mpl = random.choice(["M25", "M24", "M23", "M22", "M21", "M19"])
+            loc = random.choice(["Jakarta", "Bogor", "Bekasi", "Bandung", "Site UBPN"])
+
+            join_date = f"20{random.randint(13, 23)}-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}"
+            years_bureau = round(random.uniform(0, 8), 1)
+            years_dept = round(random.uniform(0, 12), 1)
+            perf = round(random.uniform(2.0, 5.0), 2)
+
+            disc = random.choice([0, 0, 0, 1])  # 25% chance punya catatan disiplin
+
+            tech = random.choice(["HCIS", "SAP", "Data Governance", "Python", "ETL", "None"])
+            soft = random.choice(["Analytical", "Communication", "Leadership", "Coordination"])
+            cert = random.choice(["HC Cert", "ITIL", "COBIT", "None"])
+
+            row = {
+                "employee_id": emp_id,
+                "full_name": full,
+                "email": f"{emp_id.lower()}@example.com",
+                "department": dept,
+                "bureau": bur,
+                "job_title": job,
+                "mpl_level": mpl,
+                "work_location": loc,
+                "date_joined": join_date,
+                "years_in_bureau": years_bureau,
+                "years_in_department": years_dept,
+                "avg_perf_3yr": perf,
+                "has_discipline_issue": disc,
+                "technical_skills": tech,
+                "soft_skills": soft,
+                "certifications": cert,
+                "notes": "",
+            }
+
+            dq = calculate_data_quality(row)
+            is_bh = 1 if is_candidate_bureau_head(row) else 0
+            last = datetime.now().isoformat(timespec="seconds")
+
+            cur.execute(
+                """
+                INSERT INTO employees (
+                    employee_id, full_name, email, department, bureau, job_title,
+                    mpl_level, work_location, date_joined, years_in_bureau,
+                    years_in_department, avg_perf_3yr, has_discipline_issue,
+                    technical_skills, soft_skills, certifications, notes,
+                    is_candidate_bureau_head, data_quality_score, last_updated
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    row["employee_id"], row["full_name"], row["email"],
+                    row["department"], row["bureau"], row["job_title"],
+                    row["mpl_level"], row["work_location"], row["date_joined"],
+                    row["years_in_bureau"], row["years_in_department"],
+                    row["avg_perf_3yr"], row["has_discipline_issue"],
+                    row["technical_skills"], row["soft_skills"], row["certifications"], row["notes"],
+                    is_bh, dq, last
+                )
+            )
+
+            log_audit(user_role, "INSERT_DUMMY", row["employee_id"], "Generate dummy employee")
+
+        conn.commit()
+        st.success("🎉 100 dummy data pegawai berhasil dibuat!")
+        st.balloons()
 
 
 # =========================================================
