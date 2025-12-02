@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, date
 import random
+from audit_engine import AuditTrail
 
 # =========================================================
 # CONFIG
@@ -804,3 +805,4 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
