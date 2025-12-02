@@ -534,7 +534,12 @@ if page == "Input / Update Data Pegawai":
                 ),
             )
             conn.commit()
-            log_audit(user_role, "INSERT", row["employee_id"], "Input data pegawai baru")
+            audit.log_insert(
+            user_role=user_role,
+            employee_id=row["employee_id"],
+            new_data=row
+            )
+
             st.success(f"Data pegawai dengan ID {row['employee_id']} berhasil disimpan.")
 
         st.info(
@@ -825,5 +830,6 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
 
 
