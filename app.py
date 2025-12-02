@@ -426,76 +426,76 @@ if page == "Input / Update Data Pegawai":
         existing = cur.fetchone()
 
         if existing:
-        # ============================
-        # BEFORE UPDATE → ambil data lama
-        # ============================
-        cur.execute("SELECT * FROM employees WHERE employee_id=?", (row["employee_id"],))
-        old = cur.fetchone()
-        old_dict = dict(zip([column[0] for column in cur.description], old))
-    
-        # ============================
-        # UPDATE
-        # ============================
-        cur.execute(
-            """
-            UPDATE employees
-            SET full_name = ?,
-                email = ?,
-                department = ?,
-                bureau = ?,
-                job_title = ?,
-                mpl_level = ?,
-                work_location = ?,
-                date_joined = ?,
-                years_in_bureau = ?,
-                years_in_department = ?,
-                avg_perf_3yr = ?,
-                has_discipline_issue = ?,
-                technical_skills = ?,
-                soft_skills = ?,
-                certifications = ?,
-                notes = ?,
-                is_candidate_bureau_head = ?,
-                data_quality_score = ?,
-                last_updated = ?
-            WHERE employee_id = ?
-            """,
-            (
-                row["full_name"],
-                row["email"],
-                row["department"],
-                row["bureau"],
-                row["job_title"],
-                row["mpl_level"],
-                row["work_location"],
-                row["date_joined"],
-                row["years_in_bureau"],
-                row["years_in_department"],
-                row["avg_perf_3yr"],
-                row["has_discipline_issue"],
-                row["technical_skills"],
-                row["soft_skills"],
-                row["certifications"],
-                row["notes"],
-                row["is_candidate_bureau_head"],
-                row["data_quality_score"],
-                row["last_updated"],
-                row["employee_id"],
-            ),
-        )
-        conn.commit()
-    
-        # ============================
-        # AFTER UPDATE → log perubahan
-        # ============================
-        audit.log_update(
-            user_role=user_role,
-            employee_id=row["employee_id"],
-            before=old_dict,
-            after=row
-        )
-    
-        st.success(f"Data pegawai dengan ID {row['employee_id']} berhasil diupdate.")
+            # ============================
+            # BEFORE UPDATE → ambil data lama
+            # ============================
+            cur.execute("SELECT * FROM employees WHERE employee_id=?", (row["employee_id"],))
+            old = cur.fetchone()
+            old_dict = dict(zip([column[0] for column in cur.description], old))
+        
+            # ============================
+            # UPDATE
+            # ============================
+            cur.execute(
+                """
+                UPDATE employees
+                SET full_name = ?,
+                    email = ?,
+                    department = ?,
+                    bureau = ?,
+                    job_title = ?,
+                    mpl_level = ?,
+                    work_location = ?,
+                    date_joined = ?,
+                    years_in_bureau = ?,
+                    years_in_department = ?,
+                    avg_perf_3yr = ?,
+                    has_discipline_issue = ?,
+                    technical_skills = ?,
+                    soft_skills = ?,
+                    certifications = ?,
+                    notes = ?,
+                    is_candidate_bureau_head = ?,
+                    data_quality_score = ?,
+                    last_updated = ?
+                WHERE employee_id = ?
+                """,
+                (
+                    row["full_name"],
+                    row["email"],
+                    row["department"],
+                    row["bureau"],
+                    row["job_title"],
+                    row["mpl_level"],
+                    row["work_location"],
+                    row["date_joined"],
+                    row["years_in_bureau"],
+                    row["years_in_department"],
+                    row["avg_perf_3yr"],
+                    row["has_discipline_issue"],
+                    row["technical_skills"],
+                    row["soft_skills"],
+                    row["certifications"],
+                    row["notes"],
+                    row["is_candidate_bureau_head"],
+                    row["data_quality_score"],
+                    row["last_updated"],
+                    row["employee_id"],
+                ),
+            )
+            conn.commit()
+        
+            # ============================
+            # AFTER UPDATE → log perubahan
+            # ============================
+            audit.log_update(
+                user_role=user_role,
+                employee_id=row["employee_id"],
+                before=old_dict,
+                after=row
+            )
+        
+            st.success(f"Data pegawai dengan ID {row['employee_id']} berhasil diupdate.")
 
         else:
             # Insert baru
@@ -830,6 +830,7 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
 
 
 
