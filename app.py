@@ -501,6 +501,16 @@ elif page == "Daftar Pegawai & Screening Kandidat":
     conn = get_conn()
     df = pd.read_sql_query("SELECT * FROM employees", conn)
 
+    # Tambahkan ini:
+    from data_strategist import run_data_strategist_pipeline
+
+    required_skills = {
+        "technical": ["hcis", "database", "sql", "sap", "data governance"],
+        "soft": ["analytical", "communication", "coordination", "leadership"]
+    }
+
+    processed_df, insights = run_data_strategist_pipeline(df, required_skills)
+    
     if df.empty:
         st.warning("Belum ada data pegawai.")
     else:
@@ -644,4 +654,5 @@ elif page == "Data Quality Dashboard":
             "muncul di soal: validasi otomatis, pengurangan human error, dan monitoring "
             "kualitas data HC."
         )
+
 
