@@ -1,11 +1,14 @@
 # app.py
+# =========================================================
+# HC Employee Database + Data Strategist Engine
+# =========================================================
+
 import streamlit as st
 import sqlite3
 import pandas as pd
+import numpy as np
 from datetime import datetime, date
 import random
-from data_strategist import run_data_strategist_pipeline
-
 
 # =========================================================
 # CONFIG
@@ -18,8 +21,8 @@ st.set_page_config(
 st.title("📋 HC Employee Database – HC System & Data Management")
 
 st.caption(
-    "Prototype HCIS: data pegawai, validasi otomatis, audit trail, dan screening kandidat "
-    "Bureau Head HC System & Data Management."
+    "Prototype HCIS: data pegawai, validasi otomatis, audit trail, "
+    "screening kandidat & strategic analytics untuk HC System & Data Management Bureau Head."
 )
 
 # =========================================================
@@ -94,6 +97,9 @@ def log_audit(user_role: str, action_type: str, employee_id: str, detail: str):
     conn.commit()
 
 
+# =========================================================
+# DATA QUALITY & BUREAU HEAD RULE (BASIC)
+# =========================================================
 def calculate_data_quality(row: dict) -> float:
     """
     Skor sederhana 0–100:
@@ -121,9 +127,9 @@ def calculate_data_quality(row: dict) -> float:
 
 def is_candidate_bureau_head(row: dict) -> bool:
     """
-    Rule sederhana berdasarkan flyer:
+    Rule dasar berdasarkan flyer:
     - MPL antara M25–M19
-    - Avg performance 3 tahun >= 3.5 (bisa sesuaikan)
+    - Avg performance 3 tahun >= 3.5
     - Tidak ada catatan disiplin
     - Lama di Bureau >= 1 tahun ATAU lama di Department >= 4 tahun
     """
@@ -140,6 +146,131 @@ def is_candidate_bureau_head(row: dict) -> bool:
     tenure_ok = (years_bureau >= 1) or (years_dept >= 4)
 
     return bool(mpl_ok and perf_ok and no_discipline and tenure_ok)
+
+
+# =========================================================
+# DATA STRATEGIST ENGINE
+# =========================================================
+REQUIRED_SKILLS = {
+    "technical": ["hcis", "data", "sql", "sap", "etl", "data governance"],
+    "soft": ["analytical", "communication", "coordination", "leadership"]
+}
+
+
+def _parse_skill_list(text):
+    return [x.strip().lower() for x in str(text).split(",") if x.strip()]
+
+
+def run_data_strategist_pipeline(df: pd.DataFrame):
+    """
+    Pipeline:
+    1. Advanced data quality (approx)
+    2. Skill matching & competency gap
+    3. Talent readiness index
+    4. Ranking kandidat + insights
+    """
+    if df.empty:
+        return df, []
+
+    df = df.copy()
+
+    # 1) Advanced data quality score (menggunakan kolom existing)
+    adv_score = []
+    for _, r in df.iterrows():
+        s = 0
+        # completeness
+        required_cols = [
+            "employee_id", "full_name", "department", "bureau",
+            "job_title", "mpl_level", "work_location", "date_joined"
+        ]
+        missing = sum(1 for c in required_cols if not r[c])
+        s += max(0, 40 - missing * 5)
+
+        # performance & tenure valid
+        if 0 <= (r["avg_perf_3yr"] or 0) <= 5:
+            s += 20
+        if 0 <= (r["years_in_bureau"] or 0) <= 50 and 0 <= (r["years_in_department"] or 0) <= 50:
+            s += 20
+
+        # email format sederhana
+        if "@" in str(r["email"]):
+            s += 20
+
+        adv_score.append(s)
+
+    df["data_quality_score_adv"] = adv_score
+
+    # 2) Skill matching & competency gap
+    tech_req = [x.lower() for x in REQUIRED_SKILLS["technical"]]
+    soft_req = [x.lower() for x in REQUIRED_SKILLS["soft"]]
+
+    tech_match_score = []
+    soft_match_score = []
+    comp_gap_score = []
+
+    for _, r in df.iterrows():
+        emp_tech = _parse_skill_list(r["technical_skills"])
+        emp_soft = _parse_skill_list(r["soft_skills"])
+
+        tech_match = len([t for t in tech_req if t in emp_tech])
+        soft_match = len([s for s in soft_req if s in emp_soft])
+        gap = (len(tech_req) - tech_match) + (len(soft_req) - soft_match)
+
+        tech_match_score.append(tech_match)
+        soft_match_score.append(soft_match)
+        comp_gap_score.append(gap)
+
+    df["tech_match"] = tech_match_score
+    df["soft_match"] = soft_match_score
+    df["competency_gap_score"] = comp_gap_score
+
+    # 3) Talent Readiness Index (0–100)
+    readiness = []
+    for _, r in df.iterrows():
+        s = 0
+        # performance 40%
+        s += (min(max(r["avg_perf_3yr"], 0), 5) / 5) * 40
+        # tenure di bureau 20%
+        s += min((r["years_in_bureau"] or 0) / 5, 1) * 20
+        # competency gap 20% (semakin kecil gap semakin tinggi skor)
+        gap_norm = min(r["competency_gap_score"] / 6, 1)
+        s += (1 - gap_norm) * 20
+        # disiplin 20%
+        if not r["has_discipline_issue"]:
+            s += 20
+
+        readiness.append(round(s, 1))
+
+    df["talent_readiness_index"] = readiness
+
+    # 4) Ranking kandidat berdasarkan readiness
+    df = df.sort_values("talent_readiness_index", ascending=False).reset_index(drop=True)
+    df["talent_rank"] = df.index + 1
+
+    # 5) Insights ringkas
+    insights = []
+    avg_readiness = df["talent_readiness_index"].mean()
+    if avg_readiness >= 75:
+        insights.append(f"✅ Rata-rata Talent Readiness cukup tinggi ({avg_readiness:.1f}).")
+    elif avg_readiness >= 60:
+        insights.append(f"⚠️ Rata-rata Talent Readiness moderat ({avg_readiness:.1f}). Perlu penguatan kompetensi.")
+    else:
+        insights.append(f"❗ Rata-rata Talent Readiness rendah ({avg_readiness:.1f}). Perlu program pengembangan intensif.")
+
+    ready_count = (df["talent_readiness_index"] >= 75).sum()
+    insights.append(f"⭐ Terdapat {ready_count} kandidat dengan readiness ≥ 75 untuk pipeline Bureau Head.")
+
+    high_gap = (df["competency_gap_score"] >= 4).sum()
+    if high_gap > 0:
+        insights.append(f"⚠️ {high_gap} pegawai memiliki competency gap tinggi (≥4 skill belum terpenuhi).")
+
+    top = df.iloc[0]
+    insights.append(
+        f"🏆 Kandidat terkuat saat ini: **{top['full_name']} ({top['employee_id']})** "
+        f"dengan readiness **{top['talent_readiness_index']:.1f}**."
+    )
+
+    return df, insights
 
 
 # =========================================================
@@ -435,8 +566,8 @@ elif page == "Generate Dummy Data (100)":
 
             disc = random.choice([0, 0, 0, 1])  # 25% chance punya catatan disiplin
 
-            tech = random.choice(["HCIS", "SAP", "Data Governance", "Python", "ETL", "None"])
-            soft = random.choice(["Analytical", "Communication", "Leadership", "Coordination"])
+            tech = random.choice(["HCIS, Data, SQL", "SAP, ETL", "Data Governance", "Python, SQL", "None"])
+            soft = random.choice(["Analytical, Communication", "Leadership", "Coordination", "Communication"])
             cert = random.choice(["HC Cert", "ITIL", "COBIT", "None"])
 
             row = {
@@ -493,7 +624,7 @@ elif page == "Generate Dummy Data (100)":
 
 
 # =========================================================
-# PAGE 2 – DAFTAR PEGAWAI & SCREENING
+# PAGE 2 – DAFTAR PEGAWAI & SCREENING + DATA STRATEGIST
 # =========================================================
 elif page == "Daftar Pegawai & Screening Kandidat":
     st.subheader("👥 Daftar Pegawai & Screening Kandidat Bureau Head")
@@ -501,35 +632,28 @@ elif page == "Daftar Pegawai & Screening Kandidat":
     conn = get_conn()
     df = pd.read_sql_query("SELECT * FROM employees", conn)
 
-    # Tambahkan ini:
-    from data_strategist import run_data_strategist_pipeline
-
-    required_skills = {
-        "technical": ["hcis", "database", "sql", "sap", "data governance"],
-        "soft": ["analytical", "communication", "coordination", "leadership"]
-    }
-
-    processed_df, insights = run_data_strategist_pipeline(df, required_skills)
-    
     if df.empty:
         st.warning("Belum ada data pegawai.")
     else:
+        # Jalankan Data Strategist Engine
+        processed_df, insights = run_data_strategist_pipeline(df)
+
         # Filter sederhana
         col1, col2, col3 = st.columns(3)
         with col1:
             dept_filter = st.selectbox(
                 "Filter Department",
-                ["(Semua)"] + sorted(df["department"].dropna().unique().tolist())
+                ["(Semua)"] + sorted(processed_df["department"].dropna().unique().tolist())
             )
         with col2:
             bureau_filter = st.selectbox(
                 "Filter Bureau",
-                ["(Semua)"] + sorted(df["bureau"].dropna().unique().tolist())
+                ["(Semua)"] + sorted(processed_df["bureau"].dropna().unique().tolist())
             )
         with col3:
-            only_candidate = st.checkbox("Tampilkan hanya kandidat Bureau Head", value=False)
+            only_candidate = st.checkbox("Tampilkan hanya kandidat Bureau Head (rule dasar)", value=False)
 
-        df_view = df.copy()
+        df_view = processed_df.copy()
         if dept_filter != "(Semua)":
             df_view = df_view[df_view["department"] == dept_filter]
         if bureau_filter != "(Semua)":
@@ -537,9 +661,11 @@ elif page == "Daftar Pegawai & Screening Kandidat":
         if only_candidate:
             df_view = df_view[df_view["is_candidate_bureau_head"] == 1]
 
+        st.markdown("### 📊 Tabel Screening & Talent Readiness")
         st.dataframe(
             df_view[
                 [
+                    "talent_rank",
                     "employee_id",
                     "full_name",
                     "department",
@@ -549,29 +675,54 @@ elif page == "Daftar Pegawai & Screening Kandidat":
                     "avg_perf_3yr",
                     "years_in_bureau",
                     "years_in_department",
+                    "tech_match",
+                    "soft_match",
+                    "competency_gap_score",
+                    "talent_readiness_index",
                     "is_candidate_bureau_head",
-                    "data_quality_score",
+                    "data_quality_score_adv",
                     "last_updated",
                 ]
             ].rename(
                 columns={
+                    "talent_rank": "Rank",
                     "employee_id": "EmpID",
                     "full_name": "Nama",
                     "mpl_level": "MPL",
                     "avg_perf_3yr": "Rata2 Kinerja 3th",
                     "years_in_bureau": "Thn di Bureau",
                     "years_in_department": "Thn di Dept",
-                    "is_candidate_bureau_head": "Kandidat BH",
-                    "data_quality_score": "Skor Data",
+                    "tech_match": "Match Tech",
+                    "soft_match": "Match Soft",
+                    "competency_gap_score": "Gap Kompetensi",
+                    "talent_readiness_index": "Readiness Index",
+                    "is_candidate_bureau_head": "Kandidat BH (Rule Dasar)",
+                    "data_quality_score_adv": "Skor Data (Adv)",
                 }
             ),
             use_container_width=True,
         )
 
         st.caption(
-            "Kolom **Kandidat BH** = 1 menandakan pegawai memenuhi rule dasar "
-            "untuk _HC System & Data Management Bureau Head_ (rotasi/promosi)."
+            "Ranking berdasarkan **Talent Readiness Index** yang menggabungkan kinerja, masa kerja, gap kompetensi, "
+            "dan catatan disiplin. Kolom *Kandidat BH (Rule Dasar)* mengikuti rule dari flyer MPL & tenure."
         )
+
+        # Mini dashboard di atas tabel
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.metric("Rata-rata Readiness", f"{processed_df['talent_readiness_index'].mean():.1f}")
+        with c2:
+            st.metric("Talent Ready (≥75)", int((processed_df["talent_readiness_index"] >= 75).sum()))
+        with c3:
+            st.metric("Gap Kompetensi Tinggi (≥4)", int((processed_df["competency_gap_score"] >= 4).sum()))
+        with c4:
+            st.metric("Data Quality (Adv Avg)", f"{processed_df['data_quality_score_adv'].mean():.0f}/100")
+
+        # Strategic Insights
+        st.markdown("### 🔍 Strategic Insights (Auto-generated)")
+        for i in insights:
+            st.write("• " + i)
 
 
 # =========================================================
@@ -612,20 +763,20 @@ elif page == "Data Quality Dashboard":
         col1, col2, col3 = st.columns(3)
         with col1:
             avg_score = df["data_quality_score"].mean()
-            st.metric("Rata-rata Skor Kualitas Data", f"{avg_score:.1f} / 100")
+            st.metric("Rata-rata Skor Kualitas Data (Basic)", f"{avg_score:.1f} / 100")
 
         with col2:
             cnt_good = (df["data_quality_score"] >= 80).sum()
-            st.metric("Data sangat baik (≥80)", cnt_good)
+            st.metric("Data sangat baik (≥80)", int(cnt_good))
 
         with col3:
             cnt_bad = (df["data_quality_score"] < 60).sum()
-            st.metric("Data perlu perbaikan (<60)", cnt_bad)
+            st.metric("Data perlu perbaikan (<60)", int(cnt_bad))
 
-        st.markdown("### Distribusi Skor Kualitas Data")
+        st.markdown("### Distribusi Skor Kualitas Data (Basic)")
         st.bar_chart(df.set_index("employee_id")["data_quality_score"])
 
-        st.markdown("### Detail Data")
+        st.markdown("### Detail Data (Basic Quality)")
         st.dataframe(
             df[
                 [
@@ -650,9 +801,6 @@ elif page == "Data Quality Dashboard":
         )
 
         st.caption(
-            "Dashboard ini menggambarkan praktik **data quality management** yang sering "
-            "muncul di soal: validasi otomatis, pengurangan human error, dan monitoring "
-            "kualitas data HC."
+            "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
+            "pengurangan human error, dan monitoring kualitas data HC."
         )
-
-
