@@ -274,6 +274,23 @@ def run_data_strategist_pipeline(df: pd.DataFrame):
 
     return df, insights
 
+# =========================================================
+# UTIL: Bandingkan perubahan sebelum → sesudah
+# =========================================================
+def diff_changes(before: dict, after: dict):
+    changes = []
+    for key in after.keys():
+        b = before.get(key)
+        a = after.get(key)
+        if b != a:
+            changes.append({
+                "field": key,
+                "before": b,
+                "after": a
+            })
+    return changes
+
+
 
 # =========================================================
 # SIDEBAR – ROLE & NAVIGATION
@@ -831,6 +848,7 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
 
 
 
