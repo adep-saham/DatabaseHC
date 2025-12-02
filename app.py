@@ -804,17 +804,20 @@ elif page == "Audit Trail":
                     changes = diff_changes(before, after)
         
                     with st.expander("🔍 Lihat perubahan data (Before → After)", expanded=False):
+                        changes = diff_changes(before, after)
+                    
                         if len(changes) == 0:
                             st.info("Tidak ada perubahan field.")
                         else:
                             for c in changes:
                                 st.markdown(
                                     f"""
-                                    **{c['field']}**
-                                    - Before: `{c['before']}`
-                                    - After: `{c['after']}`
+                                    **🔸 {c['field']}**
+                                    - **Before:** `{c['before']}`
+                                    - **After:**  `{c['after']}`
                                     """
                                 )
+
                 except:
                     st.caption(row["detail"])
         
@@ -886,6 +889,7 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
 
 
 
