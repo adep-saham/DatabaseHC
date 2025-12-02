@@ -785,7 +785,42 @@ elif page == "Audit Trail":
     if df_log.empty:
         st.info("Belum ada aktivitas yang terekam.")
     else:
-        st.dataframe(df_log, use_container_width=True)
+    for idx, row in df_log.iterrows():
+        st.write("---")
+        st.write(f"🕒 **{row['action_time']}** | 👤 {row['user_role']} | 🔧 {row['action_type']} | 🆔 {row['employee_id']}")
+    
+        import json
+    
+        # Jika UPDATE → tampilkan perubahan per-field
+        if row["action_type"] == "UPDATE":
+            try:
+                detail = json.loads(row["detail"])
+                before = detail.get("before", {})
+                after = detail.get("after", {})
+    
+                changes = diff_changes(before, after)
+    
+                with st.expander("🔍 Lihat perubahan data (Before → After)", expanded=False):
+                    if len(changes) == 0:
+                        st.info("Tidak ada perubahan field.")
+                    else:
+                        for c in changes:
+                            st.markdown(
+                                f"""
+                                **{c['field']}**
+                                - Before: `{c['before']}`
+                                - After: `{c['after']}`
+                                """
+                            )
+            except:
+                st.caption(row["detail"])
+    
+        else:
+            # INSERT, DELETE, DUMMY, dsb
+            st.caption(row["detail"])
+
+
+        
         st.caption(
             "Audit trail mendukung prinsip **akuntabilitas, keamanan, dan kepatuhan** "
             "dalam pengelolaan data HC."
@@ -848,6 +883,7 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
 
 
 
