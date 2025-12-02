@@ -4,6 +4,8 @@ import sqlite3
 import pandas as pd
 from datetime import datetime, date
 import random
+from data_strategist import run_data_strategist_pipeline
+
 
 # =========================================================
 # CONFIG
@@ -642,3 +644,4 @@ elif page == "Data Quality Dashboard":
             "muncul di soal: validasi otomatis, pengurangan human error, dan monitoring "
             "kualitas data HC."
         )
+
