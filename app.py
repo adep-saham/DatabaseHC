@@ -282,13 +282,16 @@ def diff_changes(before: dict, after: dict):
     for key in after.keys():
         b = before.get(key)
         a = after.get(key)
-        if b != a:
+
+        # Hanya tampilkan jika b != a DAN bukan field internal yang tidak relevan
+        if b != a and key not in ["last_updated", "data_quality_score"]:
             changes.append({
                 "field": key,
                 "before": b,
                 "after": a
             })
     return changes
+
 
 
 
@@ -883,6 +886,7 @@ elif page == "Data Quality Dashboard":
             "Dashboard ini menggambarkan praktik **data quality management**: validasi otomatis, "
             "pengurangan human error, dan monitoring kualitas data HC."
         )
+
 
 
 
