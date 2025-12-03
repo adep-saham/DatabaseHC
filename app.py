@@ -5,7 +5,7 @@ from ui_form import render_form
 from ui_screening import render_screening
 from ui_audit import render_audit
 from ui_quality import render_quality
-from generate_dummy import generate_dummy_data
+from generate_dummy_data import generate_dummy_data
 
 
 # =====================================
@@ -149,6 +149,7 @@ elif menu == "Audit Trail":
 
 elif menu == "Data Quality Dashboard":
     render_quality()
+
 
 
 
