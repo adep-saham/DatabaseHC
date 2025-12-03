@@ -6,6 +6,35 @@ from ui_screening import render_screening
 from ui_audit import render_audit
 from ui_quality import render_quality
 
+# =====================================
+# Add Migration Function Here
+# =====================================
+import sqlite3
+
+def upgrade_audit_table():
+    conn = sqlite3.connect("hc_employee.db")
+    cur = conn.cursor()
+
+    alter_sql = [
+        "ALTER TABLE audit_log ADD COLUMN before_data TEXT",
+        "ALTER TABLE audit_log ADD COLUMN after_data TEXT",
+        "ALTER TABLE audit_log ADD COLUMN ip_address TEXT"
+    ]
+
+    results = []
+    for sql in alter_sql:
+        try:
+            cur.execute(sql)
+            results.append(f"✔ SUCCESS: {sql}")
+        except Exception as e:
+            results.append(f"⚠ SKIPPED: {sql} — {e}")
+
+    conn.commit()
+    conn.close()
+    return results
+
+# =====================================
+
 st.set_page_config(page_title="HC Employee Database", layout="wide")
 
 st.title("📋 HC Employee Database – HC System & Data Management")
@@ -30,6 +59,22 @@ menu = st.sidebar.radio(
         "Data Quality Dashboard"
     ]
 )
+
+# =====================================
+# Add the BUTTON here
+# =====================================
+if role == "HC System Bureau Head":
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🛠 System Tools")
+
+    if st.sidebar.button("🔧 Upgrade Audit Table"):
+        st.sidebar.write("Running migration...")
+        results = upgrade_audit_table()
+        for r in results:
+            st.sidebar.write(r)
+        st.sidebar.success("Done! Database updated.")
+
+# =====================================
 
 if menu == "Input / Update Data Pegawai":
     render_form(role)
