@@ -81,7 +81,7 @@ def generate_employee(emp_id):
 # =========================================================
 # INSERT PROCESS
 # =========================================================
-def insert_dummy(count=10):
+def generate_dummy_data(count=15):
     conn = sqlite3.connect(DB)
     cur = conn.cursor()
 
@@ -134,3 +134,4 @@ def insert_dummy(count=10):
 
 if __name__ == "__main__":
     insert_dummy(15)
+
