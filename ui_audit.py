@@ -3,23 +3,45 @@ import pandas as pd
 import json
 import ast
 from db import get_conn
-from utils import diff_changes
 
 
+# =========================================================
+# Helper: aman membaca JSON / dict-string
+# =========================================================
 def safe_json(raw):
     if raw in [None, "", "null"]:
         return {}
     try:
         return json.loads(raw)
-    except:
+    except Exception:
         try:
             return ast.literal_eval(raw)
-        except:
+        except Exception:
             return {}
 
 
-def render_diff(before, after):
-    diffs = diff_changes(before, after)
+# =========================================================
+# Build diff antara before & after
+# =========================================================
+def build_diffs(before: dict, after: dict):
+    fields = sorted(set(before.keys()) | set(after.keys()))
+    diffs = []
+    for f in fields:
+        b = before.get(f)
+        a = after.get(f)
+        if b != a:
+            diffs.append(
+                {
+                    "field": f,
+                    "before": "" if b is None else b,
+                    "after": "" if a is None else a,
+                }
+            )
+    return diffs
+
+
+def render_diff(before: dict, after: dict):
+    diffs = build_diffs(before, after)
 
     if not diffs:
         st.info("Tidak ada perubahan field.")
@@ -27,63 +49,51 @@ def render_diff(before, after):
 
     st.write("### 🔄 Perubahan Field")
 
-    st.markdown("""
+    st.markdown(
+        """
     <table style='width:100%;border-collapse:collapse;margin-top:10px;'>
         <tr style='background:#EEE;font-weight:bold;'>
             <td style='padding:8px;border:1px solid #DDD;'>Field</td>
             <td style='padding:8px;border:1px solid #DDD;'>Before</td>
             <td style='padding:8px;border:1px solid #DDD;'>After</td>
         </tr>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     for d in diffs:
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <tr>
             <td style='padding:8px;border:1px solid #DDD;'>{d['field']}</td>
             <td style='padding:8px;border:1px solid #DDD;color:#B00020;'>{d['before']}</td>
             <td style='padding:8px;border:1px solid #DDD;color:#006400;font-weight:bold;'>{d['after']}</td>
         </tr>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("</table>", unsafe_allow_html=True)
 
 
-def render_audit():
-    st.subheader("🕒 Audit Trail (Simple & Powerful)")
-
-    conn = get_conn()
-    df = pd.read_sql_query("SELECT * FROM audit_log ORDER BY action_time DESC", conn)
-
-    if df.empty:
-        st.info("Belum ada log.")
+def render_insert_table(after: dict):
+    """Untuk INSERT / INSERT_DUMMY: tampilkan semua field sebagai 'After'."""
+    if not after:
+        st.info("Tidak ada data untuk ditampilkan.")
         return
 
-    df["date"] = df["action_time"].str[:10]
+    st.write("### 🆕 Data Baru (Insert)")
 
-    for date, group in df.groupby("date"):
-        st.markdown(f"## 📅 {date}")
+    st.markdown(
+        """
+    <table style='width:100%;border-collapse:collapse;margin-top:10px;'>
+        <tr style='background:#EEE;font-weight:bold;'>
+            <td style='padding:8px;border:1px solid #DDD;'>Field</td>
+            <td style='padding:8px;border:1px solid #DDD;'>Value</td>
+        </tr>
+    """,
+        unsafe_allow_html=True,
+    )
 
-        for _, row in group.iterrows():
-
-            st.markdown(f"""
-            <div style='padding:12px;border:1px solid #DDD;background:#FAFAFA;margin-bottom:6px;'>
-                <b>🔧 {row['action_type']}</b> | 🆔 {row['employee_id']}<br>
-                👤 {row['user_role']} • 🕒 {row['action_time']}
-            </div>
-            """, unsafe_allow_html=True)
-
-            with st.expander("Detail Perubahan"):
-                before = safe_json(row["before_data"])
-                after = safe_json(row["after_data"])
-
-                if row["action_type"] == "INSERT":
-                    st.info("INSERT: Menampilkan data baru.")
-                    st.json(after)
-                    continue
-
-                if before == {} and after == {}:
-                    st.warning("Data before/after kosong. Menampilkan detail mentah:")
-                    st.code(row["detail"])
-                    continue
-
-                render_diff(before, after)
+    for k, v in after.items():
+        st.markdown(
