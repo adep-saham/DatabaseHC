@@ -3,12 +3,19 @@ import pandas as pd
 from db import get_conn
 
 def render_quality():
-    st.subheader("📊 Data Quality Dashboard")
+    st.subheader("📈 Data Quality Dashboard")
 
-    df = pd.read_sql_query("SELECT * FROM employees", get_conn())
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM employees", conn)
+    conn.close()
+
     if df.empty:
-        st.warning("Belum ada data.")
+        st.info("Belum ada data.")
         return
 
-    st.metric("Rata-rata Skor Data", f"{df['data_quality_score'].mean():.1f}")
-    st.dataframe(df)
+    df["Missing Fields"] = df.apply(
+        lambda r: sum(v in ["", None] for v in r.values),
+        axis=1
+    )
+
+    st.dataframe(df[["employee_id","full_name","Missing Fields","data_quality_score"]])
