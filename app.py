@@ -33,6 +33,56 @@ def upgrade_audit_table():
     conn.close()
     return results
 
+
+def auto_migrate_audit_table():
+    conn = sqlite3.connect("hc_employee.db")
+    cur = conn.cursor()
+
+    print("Starting audit_log auto-migration...")
+
+    # Cek apakah kolom before_data sudah ada
+    cur.execute("PRAGMA table_info(audit_log);")
+    cols = [c[1] for c in cur.fetchall()]
+
+    required_cols = ["before_data", "after_data", "ip_address"]
+
+    # Jika semua kolom sudah ada → tidak perlu migrate
+    if all(col in cols for col in required_cols):
+        return "✔ Struktur audit_log sudah sesuai. Tidak perlu migrate."
+
+    # 1. Backup table lama
+    cur.execute("ALTER TABLE audit_log RENAME TO audit_log_old;")
+
+    # 2. Create table baru sesuai audit_engine.py
+    cur.execute("""
+        CREATE TABLE audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_time TEXT,
+            user_role TEXT,
+            action_type TEXT,
+            employee_id TEXT,
+            detail TEXT,
+            before_data TEXT,
+            after_data TEXT,
+            ip_address TEXT
+        );
+    """)
+
+    # 3. Copy data lama ke tabel baru
+    #    (before_data, after_data, ip_address default = NULL)
+    cur.execute("""
+        INSERT INTO audit_log (action_time, user_role, action_type, employee_id, detail)
+        SELECT action_time, user_role, action_type, employee_id, detail
+        FROM audit_log_old;
+    """)
+
+    conn.commit()
+    conn.close()
+
+    return "🎉 Migrasi selesai! Struktur tabel audit_log sudah diperbaiki."
+
+
+
 # =====================================
 
 st.set_page_config(page_title="HC Employee Database", layout="wide")
@@ -83,6 +133,14 @@ if role == "HC System Bureau Head":
         except Exception as e:
             st.sidebar.error(str(e))
 
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🛠 Database Tools")
+
+    if st.sidebar.button("🔧 Auto-Migrate Audit Log Table"):
+        result = auto_migrate_audit_table()
+        st.sidebar.success(result)
+
+
 # =====================================
 
 if menu == "Input / Update Data Pegawai":
@@ -96,4 +154,5 @@ elif menu == "Audit Trail":
 
 elif menu == "Data Quality Dashboard":
     render_quality()
+
 
