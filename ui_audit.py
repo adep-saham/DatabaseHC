@@ -6,22 +6,22 @@ from db import get_conn
 
 
 # =========================================================
-# Helper: aman membaca JSON / dict-string
+# SAFE JSON PARSER
 # =========================================================
 def safe_json(raw):
     if raw in [None, "", "null"]:
         return {}
     try:
         return json.loads(raw)
-    except Exception:
+    except:
         try:
             return ast.literal_eval(raw)
-        except Exception:
+        except:
             return {}
 
 
 # =========================================================
-# Build diff antara before & after
+# BUILD DIFF
 # =========================================================
 def build_diffs(before: dict, after: dict):
     fields = sorted(set(before.keys()) | set(after.keys()))
@@ -76,8 +76,10 @@ def render_diff(before: dict, after: dict):
     st.markdown("</table>", unsafe_allow_html=True)
 
 
+# =========================================================
+# RENDER INSERT TABLE
+# =========================================================
 def render_insert_table(after: dict):
-    """Untuk INSERT / INSERT_DUMMY: tampilkan semua field sebagai 'After'."""
     if not after:
         st.info("Tidak ada data untuk ditampilkan.")
         return
@@ -97,3 +99,66 @@ def render_insert_table(after: dict):
 
     for k, v in after.items():
         st.markdown(
+            f"""
+        <tr>
+            <td style='padding:8px;border:1px solid #DDD;'>{k}</td>
+            <td style='padding:8px;border:1px solid #DDD;'>{v}</td>
+        </tr>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("</table>", unsafe_allow_html=True)
+
+
+# =========================================================
+# MAIN AUDIT RENDERER
+# =========================================================
+def render_audit():
+    st.subheader("🕒 Audit Trail (Simple & Powerful)")
+
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM audit_log ORDER BY action_time DESC", conn)
+    conn.close()
+
+    if df.empty:
+        st.info("Belum ada log.")
+        return
+
+    df["date"] = df["action_time"].str[:10]
+
+    for date, group in df.groupby("date"):
+        st.markdown(f"## 📅 {date}")
+
+        for _, row in group.iterrows():
+
+            st.markdown(
+                f"""
+            <div style='padding:12px;border:1px solid #DDD;background:#FAFAFA;margin-bottom:6px;'>
+                <b>🔧 {row['action_type']}</b> | 🆔 {row['employee_id']}<br>
+                👤 {row['user_role']} • 🕒 {row['action_time']}
+            </div>
+            """,
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("Detail Perubahan"):
+
+                before = safe_json(row.get("before_data"))
+                after = safe_json(row.get("after_data"))
+
+                action = str(row["action_type"] or "").upper()
+
+                # INSERT / INSERT_DUMMY
+                if action.startswith("INSERT"):
+                    render_insert_table(after)
+                    continue
+
+                # Jika before/after kosong → tampilkan detail mentah
+                if not before and not after:
+                    st.warning("Data before/after kosong. Menampilkan detail mentah:")
+                    st.code(row.get("detail", ""), language="text")
+                    continue
+
+                # UPDATE → tampilkan DIFF
+                render_diff(before, after)
