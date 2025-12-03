@@ -3,7 +3,7 @@ import streamlit as st
 from db import init_db
 from ui_form import render_form
 from ui_screening import render_screening
-from audit_engine import render_audit
+from ui_audit import render_audit
 from ui_quality import render_quality
 from generate_dummy_data import generate_dummy_data
 
@@ -149,6 +149,7 @@ elif menu == "Audit Trail":
 
 elif menu == "Data Quality Dashboard":
     render_quality()
+
 
 
 
