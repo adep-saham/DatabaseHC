@@ -65,14 +65,23 @@ menu = st.sidebar.radio(
 # =====================================
 if role == "HC System Bureau Head":
     st.sidebar.markdown("---")
-    st.sidebar.subheader("🛠 System Tools")
+    st.sidebar.subheader("🛠 SQL Console (Admin Only)")
 
-    if st.sidebar.button("🔧 Upgrade Audit Table"):
-        st.sidebar.write("Running migration...")
-        results = upgrade_audit_table()
-        for r in results:
-            st.sidebar.write(r)
-        st.sidebar.success("Done! Database updated.")
+    sql_input = st.sidebar.text_area("SQL Query", "")
+    if st.sidebar.button("Run SQL"):
+        try:
+            import sqlite3
+            conn = sqlite3.connect("hc_employee.db")
+            cur = conn.cursor()
+            cur.execute(sql_input)
+            rows = cur.fetchall()
+            conn.commit()
+            conn.close()
+            st.sidebar.success("Query executed!")
+            st.write("### SQL Result")
+            st.write(rows)
+        except Exception as e:
+            st.sidebar.error(str(e))
 
 # =====================================
 
@@ -87,3 +96,4 @@ elif menu == "Audit Trail":
 
 elif menu == "Data Quality Dashboard":
     render_quality()
+
