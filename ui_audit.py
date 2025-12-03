@@ -1,12 +1,81 @@
 import streamlit as st
 import pandas as pd
 import json
+import ast
 from db import get_conn
 from utils import diff_changes
 
+
+# =========================================================
+# SAFE PARSER – Menerima JSON atau dict Python string
+# =========================================================
+def safe_json_loads(raw):
+    """
+    Decode string dengan fallback:
+    1) JSON valid → json.loads()
+    2) Dict Python → ast.literal_eval()
+    3) Jika gagal → return {}
+    """
+    if raw is None or raw == "":
+        return {}
+
+    # Coba JSON normal
+    try:
+        return json.loads(raw)
+    except:
+        pass
+
+    # Coba Python dict string
+    try:
+        return ast.literal_eval(raw)
+    except:
+        return {}
+
+
+# =========================================================
+# BEAUTIFUL DIFF TABLE
+# =========================================================
+def render_diff_table(before, after):
+    diffs = diff_changes(before, after)
+
+    if not diffs:
+        st.info("Tidak ada perubahan field.")
+        return
+
+    st.markdown("""
+    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+        <tr style="background:#F2F2F2; border-bottom:2px solid #CCC;">
+            <th style="padding:8px; text-align:left;">Field</th>
+            <th style="padding:8px; text-align:left;">Before</th>
+            <th style="padding:8px; text-align:left;">After</th>
+        </tr>
+    """, unsafe_allow_html=True)
+
+    for d in diffs:
+        st.markdown(f"""
+        <tr>
+            <td style="padding:8px; border-top:1px solid #DDD;">
+                <b>{d['field']}</b>
+            </td>
+            <td style="padding:8px; border-top:1px solid #DDD; color:#B00020;">
+                {d['before']}
+            </td>
+            <td style="padding:8px; border-top:1px solid #DDD; color:#006400; font-weight:bold;">
+                {d['after']}
+            </td>
+        </tr>
+        """, unsafe_allow_html=True)
+
+    st.markdown("</table>", unsafe_allow_html=True)
+
+
+# =========================================================
+# MAIN AUDIT VIEW (FINAL VERSION)
+# =========================================================
 def render_audit():
     st.subheader("🕒 Audit Trail (Simple & Powerful)")
 
+    # Ambil data
     conn = get_conn()
     df = pd.read_sql_query(
         "SELECT * FROM audit_log ORDER BY action_time DESC",
@@ -17,9 +86,7 @@ def render_audit():
         st.info("Belum ada log.")
         return
 
-    # ===========================
-    # GROUP BY DATE
-    # ===========================
+    # Group berdasarkan tanggal
     df["date_only"] = df["action_time"].str[:10]
 
     for date, group in df.groupby("date_only"):
@@ -32,53 +99,39 @@ def render_audit():
             time = row["action_time"]
             user = row["user_role"]
 
-            # CARD HEADER
+            # ============= CARD HEADER =============
             st.markdown(f"""
-            <div style="padding:12px; border-radius:8px; border:1px solid #DDD; background:#FAFAFA; margin-bottom:10px;">
-                <b>🔧 {log_type}</b> &nbsp; | &nbsp; <b>🆔 {emp_id}</b>  
-                <br>👤 {user} &nbsp; • &nbsp; 🕒 {time}
+            <div style="
+                padding:14px;
+                border-radius:8px;
+                border:1px solid #DDD;
+                background:#FAFAFA;
+                margin-bottom:6px;">
+                <b>🔧 {log_type}</b> &nbsp; | &nbsp; <b>🆔 {emp_id}</b><br>
+                👤 {user} &nbsp; • &nbsp; 🕒 {time}
             </div>
             """, unsafe_allow_html=True)
 
+            # ============= DETAILS =============
             with st.expander("Detail Perubahan"):
 
-                before_raw = row["before_data"]
-                after_raw = row["after_data"]
+                before_raw = row.get("before_data", "")
+                after_raw = row.get("after_data", "")
 
-                try:
-                    before = json.loads(before_raw) if before_raw else {}
-                    after = json.loads(after_raw) if after_raw else {}
-                except:
-                    st.warning("Detail tidak dapat diproses.")
-                    st.caption(row["detail"])
+                before = safe_json_loads(before_raw)
+                after = safe_json_loads(after_raw)
+
+                # Jika log lama (INSERT) → hanya tampil detail
+                if log_type == "INSERT":
+                    st.info("INSERT: Tidak ada before data.")
+                    st.json(after)
                     continue
 
-                # Hitung diff memakai utils.diff_changes
-                diffs = diff_changes(before, after)
-
-                if not diffs:
-                    st.info("Tidak ada perubahan field.")
+                # Jika UPDATE tetapi tidak ada before/after → tampilkan raw detail
+                if before == {} and after == {}:
+                    st.warning("Detail tidak dapat diproses, menampilkan raw data:")
+                    st.code(row.get("detail", ""), language="json")
                     continue
 
-                # Tampilkan diff dalam tabel cantik
-                table_md = """
-                <table style="width:100%; border-collapse:collapse;">
-                    <tr style="background:#EEE;">
-                        <th style="padding:6px; border:1px solid #CCC;">Field</th>
-                        <th style="padding:6px; border:1px solid #CCC;">Before</th>
-                        <th style="padding:6px; border:1px solid #CCC;">After</th>
-                    </tr>
-                """
-
-                for d in diffs:
-                    table_md += f"""
-                    <tr>
-                        <td style="padding:6px; border:1px solid #CCC; font-weight:bold;">{d['field']}</td>
-                        <td style="padding:6px; border:1px solid #CCC; color:#B00020;">{d['before']}</td>
-                        <td style="padding:6px; border:1px solid #CCC; color:#006400; font-weight:bold;">{d['after']}</td>
-                    </tr>
-                    """
-
-                table_md += "</table>"
-
-                st.markdown(table_md, unsafe_allow_html=True)
+                # Tampilkan tabel diff
+                render_diff_table(before, after)
