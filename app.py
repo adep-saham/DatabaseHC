@@ -5,6 +5,8 @@ from ui_form import render_form
 from ui_screening import render_screening
 from ui_audit import render_audit
 from ui_quality import render_quality
+from generate_dummy import generate_dummy_data
+
 
 # =====================================
 # Add Migration Function Here
@@ -124,6 +126,13 @@ if role == "HC System Bureau Head":
         st.sidebar.markdown("---")
         if st.sidebar.button("🚨 Force Rebuild audit_log Table"):
                 st.sidebar.success(force_rebuild_audit_log())
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🛠 Developer Tools")
+
+    if st.sidebar.button("🚀 Generate Dummy Data"):
+        msg = generate_dummy_data(15)
+        st.sidebar.success(msg)
     
 
 
@@ -140,6 +149,7 @@ elif menu == "Audit Trail":
 
 elif menu == "Data Quality Dashboard":
     render_quality()
+
 
 
 
