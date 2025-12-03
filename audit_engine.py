@@ -1,6 +1,6 @@
 # audit_engine.py
 # =========================================================
-# Audit Trail Engine (Modular Version)
+# Audit Trail Engine (Final, Stable Version)
 # =========================================================
 
 import sqlite3
@@ -15,9 +15,9 @@ class AuditTrail:
         self.logfile = logfile
         self._init_table()
 
-    # =====================================================
-    # INIT DATABASE TABLE
-    # =====================================================
+    # -----------------------------------------------------
+    # INIT TABLE
+    # -----------------------------------------------------
     def _init_table(self):
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
@@ -41,22 +41,38 @@ class AuditTrail:
         conn.commit()
         conn.close()
 
-    # =====================================================
-    # INTERNAL HELPERS
-    # =====================================================
-    def _write_file_log(self, entry):
-        """Append log ke audit_log.txt"""
-        with open(self.logfile, "a", encoding="utf-8") as f:
-            f.write(entry + "\n")
+    # -----------------------------------------------------
+    # LOW LEVEL WRITERS
+    # -----------------------------------------------------
+    def _write_file_log(self, entry: str):
+        """Tulis log ke file teks (opsional, untuk debugging/audit offline)."""
+        try:
+            with open(self.logfile, "a", encoding="utf-8") as f:
+                f.write(entry + "\n")
+        except Exception:
+            # jangan sampai gagal hanya gara-gara file log
+            pass
 
-    def _write_db_log(self, action_type, user_role, employee_id, detail, before, after, ip):
+    def _write_db_log(
+        self,
+        action_type: str,
+        user_role: str,
+        employee_id: str,
+        detail: str,
+        before: dict,
+        after: dict,
+        ip: str,
+    ):
+        """Tulis log ke tabel audit_log (INI YANG DIPAKAI UI)."""
+
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
 
         cur.execute(
             """
             INSERT INTO audit_log
-            (action_time, user_role, action_type, employee_id, detail, before_data, after_data, ip_address)
+            (action_time, user_role, action_type, employee_id, detail,
+             before_data, after_data, ip_address)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
@@ -64,44 +80,43 @@ class AuditTrail:
                 user_role,
                 action_type,
                 employee_id,
+                detail,
                 json.dumps(before, ensure_ascii=False),
                 json.dumps(after, ensure_ascii=False),
                 ip,
-                detail,
             ),
         )
 
         conn.commit()
         conn.close()
 
-    # =====================================================
-    # LOGGING METHODS
-    # =====================================================
-    def log_access(self, user_role, action, ip="0.0.0.0"):
-        entry = f"[{datetime.now()}] ACCESS | User={user_role} | Action={action} | IP={ip}"
-        self._write_file_log(entry)
-        self._write_db_log("ACCESS", user_role, "-", action, None, None, ip)
+    # -----------------------------------------------------
+    # PUBLIC API
+    # -----------------------------------------------------
+    def log_insert(self, user_role: str, employee_id: str, after: dict, ip: str = "0.0.0.0"):
+        """Log ketika insert karyawan baru."""
+        detail_msg = "INSERT employee data"
 
-    def log_insert(self, user_role, employee_id, new_data, ip="0.0.0.0"):
         entry = (
             f"[{datetime.now()}] INSERT | User={user_role} | EmpID={employee_id} "
-            f"| After={new_data} | IP={ip}"
+            f"| IP={ip}"
         )
-        self._write_file_log(entry)
-        self._write_db_log("INSERT", user_role, employee_id, "Insert new employee", None, new_data, ip)
 
-    def log_delete(self, user_role, employee_id, old_data, ip="0.0.0.0"):
-        entry = (
-            f"[{datetime.now()}] DELETE | User={user_role} | EmpID={employee_id} "
-            f"| Before={old_data} | IP={ip}"
-        )
         self._write_file_log(entry)
-        self._write_db_log("DELETE", user_role, employee_id, "Delete employee", old_data, None, ip)
+        self._write_db_log("INSERT", user_role, employee_id, detail_msg, {}, after, ip)
 
-    def log_update(self, user_role, employee_id, before, after, ip="0.0.0.0"):
-        """Bandingkan perubahan field-level otomatis"""
+    def log_update(
+        self,
+        user_role: str,
+        employee_id: str,
+        before: dict,
+        after: dict,
+        ip: str = "0.0.0.0",
+    ):
+        """Log ketika update karyawan (before vs after)."""
+
+        # Bangun ringkasan perubahan untuk kolom yang memang berubah
         changes = {}
-
         for key in after:
             if key in before and before[key] != after[key]:
                 changes[key] = {"before": before[key], "after": after[key]}
@@ -116,7 +131,19 @@ class AuditTrail:
         self._write_file_log(entry)
         self._write_db_log("UPDATE", user_role, employee_id, detail_msg, before, after, ip)
 
-    # Getter untuk digunakan oleh Streamlit
+    def log_delete(self, user_role: str, employee_id: str, before: dict, ip: str = "0.0.0.0"):
+        """Opsional: log delete jika nanti dipakai."""
+        detail_msg = "DELETE employee data"
+
+        entry = (
+            f"[{datetime.now()}] DELETE | User={user_role} | EmpID={employee_id} "
+            f"| IP={ip}"
+        )
+
+        self._write_file_log(entry)
+        self._write_db_log("DELETE", user_role, employee_id, detail_msg, before, {}, ip)
+
+    # Getter utk kalau mau dipakai langsung dari Streamlit
     def get_logs_df(self):
         import pandas as pd
 
