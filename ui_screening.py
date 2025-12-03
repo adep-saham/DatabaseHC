@@ -1,34 +1,22 @@
 import streamlit as st
 import pandas as pd
 from db import get_conn
-from data_strategist import run_data_strategist_pipeline
-
-REQUIRED = {
-    "technical": ["hcis", "data", "sql", "sap", "etl", "data governance"],
-    "soft": ["analytical", "communication", "coordination", "leadership"]
-}
 
 def render_screening():
-    st.subheader("👥 Screening Kandidat Bureau Head")
+    st.subheader("📊 Screening Kandidat & Talent Readiness")
 
-    df = pd.read_sql_query("SELECT * FROM employees", get_conn())
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM employees", conn)
+    conn.close()
+
     if df.empty:
-        st.warning("Belum ada data.")
+        st.info("Belum ada data.")
         return
 
-    dfp, insights = run_data_strategist_pipeline(df, REQUIRED)
+    df["Readiness Score"] = (
+        df["avg_perf_3yr"].fillna(0)*10
+        - df["has_discipline_issue"].fillna(0)*20
+        + df["years_in_department"].fillna(0)*2
+    )
 
-    dept = st.selectbox("Department", ["(Semua)"] + sorted(dfp["department"].unique()))
-    bureau = st.selectbox("Bureau", ["(Semua)"] + sorted(dfp["bureau"].unique()))
-    only_bh = st.checkbox("Hanya kandidat BH")
-
-    view = dfp.copy()
-    if dept != "(Semua)": view = view[view["department"] == dept]
-    if bureau != "(Semua)": view = view[view["bureau"] == bureau]
-    if only_bh: view = view[view["is_candidate_bureau_head"] == 1]
-
-    st.dataframe(view)
-
-    st.write("### Strategic Insights")
-    for i in insights:
-        st.write("•", i)
+    st.dataframe(df)
