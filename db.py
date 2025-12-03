@@ -9,7 +9,7 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
-    # === TABLE: employees ===
+    # EMPLOYEES TABLE
     cur.execute("""
         CREATE TABLE IF NOT EXISTS employees (
             employee_id TEXT PRIMARY KEY,
@@ -35,7 +35,7 @@ def init_db():
         )
     """)
 
-    # === TABLE: audit_log ===
+    # AUDIT LOG TABLE
     cur.execute("""
         CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
