@@ -52,46 +52,52 @@ def render_audit():
 
     df["date"] = df["action_time"].str[:10]
 
-    # ======= STYLE CSS MINIMALIS =======
+    # CSS untuk grid card
     st.markdown("""
     <style>
-        .audit-card {
-            padding: 10px 15px;
-            border-radius: 6px;
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .grid-card {
             border: 1px solid #DDD;
-            margin-bottom: 6px;
-            background: #FAFAFA;
+            border-radius: 6px;
+            padding: 10px 14px;
+            background: #FFFFFF;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .audit-header {
-            font-size: 14px;
+        .card-title {
             font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
         }
-        .audit-meta {
+        .card-meta {
             font-size: 12px;
             color: #666;
+            margin-bottom: 8px;
         }
     </style>
     """, unsafe_allow_html=True)
-    # ===================================
 
+    # Render per tanggal
     for date, group in df.groupby("date"):
         st.markdown(f"### {date}")
 
-        for _, row in group.iterrows():
-            st.markdown(
-                f"""
-                <div class="audit-card">
-                    <div class="audit-header">
-                        {row['action_type']} — {row['employee_id']}
-                    </div>
-                    <div class="audit-meta">
-                        User: {row['user_role']} · Waktu: {row['action_time'][11:19]}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        # Start grid container
+        st.markdown('<div class="grid-container">', unsafe_allow_html=True)
 
+        for _, row in group.iterrows():
+            card_html = f"""
+            <div class="grid-card">
+                <div class="card-title">{row['action_type']} — {row['employee_id']}</div>
+                <div class="card-meta">User: {row['user_role']} · Waktu: {row['action_time'][11:19]}</div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
+
+            # expander di bawah card (tetap Streamlit)
             with st.expander("Detail"):
                 before = safe_json(row["before_data"])
                 after = safe_json(row["after_data"])
@@ -100,5 +106,9 @@ def render_audit():
                     render_insert(after)
                 else:
                     render_diff(before, after)
+
+        # End grid
+        st.markdown('</div>', unsafe_allow_html=True)
+
 
 
