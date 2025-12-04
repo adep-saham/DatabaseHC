@@ -25,19 +25,36 @@ def build_diffs(before, after):
 
 def render_diff(before, after):
     diffs = build_diffs(before, after)
+
     if not diffs:
         st.info("Tidak ada perubahan field.")
         return
 
-    st.write("### Perubahan Field:")
+    st.markdown("<div style='font-weight:600; margin-bottom:6px;'>Perubahan Field:</div>", unsafe_allow_html=True)
+
     for d in diffs:
-        st.write(f"**{d['field']}**  \n- Before: `{d['before']}`  \n- After: `{d['after']}`")
-        st.write("---")
+        st.markdown(f"""
+        <div style="margin-bottom:10px; padding-left:4px;">
+            <div style="font-size:13px; font-weight:600;">{d['field']}</div>
+            <div style="font-size:12px; color:#666;">
+                • Before: <span style="color:#000;">{d['before']}</span><br>
+                • After: <span style="color:#000;">{d['after']}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
 
 def render_insert(after):
-    st.write("### Data Baru:")
-    for k,v in after.items():
-        st.write(f"**{k}**: {v}")
+    st.markdown("<div style='font-weight:600; margin-bottom:6px;'>Data Baru:</div>", unsafe_allow_html=True)
+
+    for k, v in after.items():
+        st.markdown(f"""
+        <div style="margin-bottom:8px; padding-left:4px;">
+            <div style="font-size:13px; font-weight:600;">{k}</div>
+            <div style="font-size:12px; color:#000;">{v}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
 
 def render_audit():
     st.subheader("Audit Trail")
@@ -94,6 +111,7 @@ def render_audit():
                             render_diff(before, after)
 
                     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
