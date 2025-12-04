@@ -32,21 +32,21 @@ def render_diff(before, after):
 
     st.markdown("### Perubahan Field:")
 
-    # Tabel header
+    # CSS untuk tabel
     st.markdown("""
     <style>
         .diff-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
+            margin-top: 10px;
             font-size: 13px;
         }
         .diff-table th {
             text-align: left;
             padding: 6px 8px;
-            background: #f1f1f1;
+            background: #f2f2f2;
+            border-bottom: 1px solid #ccc;
             font-weight: 600;
-            border-bottom: 1px solid #ddd;
         }
         .diff-table td {
             padding: 6px 8px;
@@ -55,16 +55,16 @@ def render_diff(before, after):
     </style>
     """, unsafe_allow_html=True)
 
+    # Build HTML string utuh (penting!)
     table_html = """
     <table class="diff-table">
         <tr>
-            <th style="width:28%;">Field</th>
-            <th style="width:36%;">Before</th>
-            <th style="width:36%;">After</th>
+            <th>Field</th>
+            <th>Before</th>
+            <th>After</th>
         </tr>
     """
 
-    # Konten baris tabel
     for d in diffs:
         table_html += f"""
         <tr>
@@ -76,7 +76,9 @@ def render_diff(before, after):
 
     table_html += "</table>"
 
+    # Render sebagai HTML murni
     st.markdown(table_html, unsafe_allow_html=True)
+
 
 
 
@@ -147,6 +149,7 @@ def render_audit():
                             render_diff(before, after)
 
                     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
