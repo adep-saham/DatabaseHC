@@ -52,63 +52,50 @@ def render_audit():
 
     df["date"] = df["action_time"].str[:10]
 
-    # CSS untuk grid card
-    st.markdown("""
-    <style>
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 12px;
-            margin-bottom: 25px;
-        }
-        .grid-card {
-            border: 1px solid #DDD;
-            border-radius: 6px;
-            padding: 10px 14px;
-            background: #FFFFFF;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .card-title {
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-        .card-meta {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 8px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    # CONFIG: jumlah kolom (4 sama seperti contoh Anda)
+    NUM_COLS = 4
 
-    # Render per tanggal
     for date, group in df.groupby("date"):
         st.markdown(f"### {date}")
 
-        # Start grid container
-        st.markdown('<div class="grid-container">', unsafe_allow_html=True)
+        rows = group.to_dict("records")
 
-        for _, row in group.iterrows():
-            card_html = f"""
-            <div class="grid-card">
-                <div class="card-title">{row['action_type']} — {row['employee_id']}</div>
-                <div class="card-meta">User: {row['user_role']} · Waktu: {row['action_time'][11:19]}</div>
-            </div>
-            """
-            st.markdown(card_html, unsafe_allow_html=True)
+        # Buat grid berdasarkan jumlah kolom
+        for i in range(0, len(rows), NUM_COLS):
+            cols = st.columns(NUM_COLS)
 
-            # expander di bawah card (tetap Streamlit)
-            with st.expander("Detail"):
-                before = safe_json(row["before_data"])
-                after = safe_json(row["after_data"])
+            for idx, row in enumerate(rows[i:i+NUM_COLS]):
+                with cols[idx]:
+                    st.markdown(
+                        """
+                        <div style="
+                            border:1px solid #DDD;
+                            padding:10px 14px;
+                            border-radius:6px;
+                            background:#FFF;
+                            margin-bottom:8px;
+                        ">
+                        """,
+                        unsafe_allow_html=True
+                    )
 
-                if row["action_type"] == "INSERT":
-                    render_insert(after)
-                else:
-                    render_diff(before, after)
+                    st.markdown(
+                        f"**{row['action_type']} — {row['employee_id']}**  \n"
+                        f"<span style='font-size:12px;color:#666;'>User: {row['user_role']} · Waktu: {row['action_time'][11:19]}</span>",
+                        unsafe_allow_html=True
+                    )
 
-        # End grid
-        st.markdown('</div>', unsafe_allow_html=True)
+                    with st.expander("Detail"):
+                        before = safe_json(row["before_data"])
+                        after = safe_json(row["after_data"])
+                        if row["action_type"] == "INSERT":
+                            render_insert(after)
+                        else:
+                            render_diff(before, after)
+
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+
 
 
 
