@@ -40,7 +40,8 @@ def render_insert(after):
         st.write(f"**{k}**: {v}")
 
 def render_audit():
-    st.subheader("🕒 Audit Trail")
+    st.subheader("Audit Trail")
+
     conn = get_conn()
     df = pd.read_sql_query("SELECT * FROM audit_log ORDER BY action_time DESC", conn)
     conn.close()
@@ -51,13 +52,47 @@ def render_audit():
 
     df["date"] = df["action_time"].str[:10]
 
+    # ======= STYLE CSS MINIMALIS =======
+    st.markdown("""
+    <style>
+        .audit-card {
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #DDD;
+            margin-bottom: 6px;
+            background: #FAFAFA;
+        }
+        .audit-header {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .audit-meta {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    # ===================================
+
     for date, group in df.groupby("date"):
-        st.markdown(f"## 📅 {date}")
+        st.markdown(f"### {date}")
+
         for _, row in group.iterrows():
+            st.markdown(
+                f"""
+                <div class="audit-card">
+                    <div class="audit-header">
+                        {row['action_type']} — {row['employee_id']}
+                    </div>
+                    <div class="audit-meta">
+                        User: {row['user_role']} · Waktu: {row['action_time'][11:19]}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            st.markdown(f"### 🔧 {row['action_type']} | 🆔 {row['employee_id']} | 👤 {row['user_role']}")
-
-            with st.expander("Detail Perubahan"):
+            with st.expander("Detail"):
                 before = safe_json(row["before_data"])
                 after = safe_json(row["after_data"])
 
@@ -65,3 +100,5 @@ def render_audit():
                     render_insert(after)
                 else:
                     render_diff(before, after)
+
+
