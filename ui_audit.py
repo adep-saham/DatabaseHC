@@ -30,18 +30,54 @@ def render_diff(before, after):
         st.info("Tidak ada perubahan field.")
         return
 
-    st.markdown("<div style='font-weight:600; margin-bottom:6px;'>Perubahan Field:</div>", unsafe_allow_html=True)
+    st.markdown("### Perubahan Field:")
 
+    # Tabel header
+    st.markdown("""
+    <style>
+        .diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            font-size: 13px;
+        }
+        .diff-table th {
+            text-align: left;
+            padding: 6px 8px;
+            background: #f1f1f1;
+            font-weight: 600;
+            border-bottom: 1px solid #ddd;
+        }
+        .diff-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    table_html = """
+    <table class="diff-table">
+        <tr>
+            <th style="width:28%;">Field</th>
+            <th style="width:36%;">Before</th>
+            <th style="width:36%;">After</th>
+        </tr>
+    """
+
+    # Konten baris tabel
     for d in diffs:
-        st.markdown(f"""
-        <div style="margin-bottom:10px; padding-left:4px;">
-            <div style="font-size:13px; font-weight:600;">{d['field']}</div>
-            <div style="font-size:12px; color:#666;">
-                • Before: <span style="color:#000;">{d['before']}</span><br>
-                • After: <span style="color:#000;">{d['after']}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        table_html += f"""
+        <tr>
+            <td><b>{d['field']}</b></td>
+            <td>{d['before']}</td>
+            <td>{d['after']}</td>
+        </tr>
+        """
+
+    table_html += "</table>"
+
+    st.markdown(table_html, unsafe_allow_html=True)
+
 
 
 def render_insert(after):
@@ -111,6 +147,7 @@ def render_audit():
                             render_diff(before, after)
 
                     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
