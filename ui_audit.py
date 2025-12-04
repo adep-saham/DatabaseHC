@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import ast
+import streamlit.components.v1 as components
 from db import get_conn
 
 def safe_json(raw):
@@ -32,32 +33,31 @@ def render_diff(before, after):
 
     st.markdown("### Perubahan Field:")
 
-    # CSS untuk tabel
-    st.markdown("""
+    # Build full HTML table
+    table_html = """
+    <html>
+    <head>
     <style>
-        .diff-table {
+        table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
             font-size: 13px;
         }
-        .diff-table th {
-            text-align: left;
-            padding: 6px 8px;
+        th {
             background: #f2f2f2;
+            padding: 6px 8px;
             border-bottom: 1px solid #ccc;
+            text-align: left;
             font-weight: 600;
         }
-        .diff-table td {
+        td {
             padding: 6px 8px;
             border-bottom: 1px solid #eee;
         }
     </style>
-    """, unsafe_allow_html=True)
-
-    # Build HTML string utuh (penting!)
-    table_html = """
-    <table class="diff-table">
+    </head>
+    <body>
+    <table>
         <tr>
             <th>Field</th>
             <th>Before</th>
@@ -74,10 +74,14 @@ def render_diff(before, after):
         </tr>
         """
 
-    table_html += "</table>"
+    table_html += """
+    </table>
+    </body>
+    </html>
+    """
 
-    # Render sebagai HTML murni
-    st.markdown(table_html, unsafe_allow_html=True)
+    # Render menggunakan iframe (100% berhasil)
+    components.html(table_html, height=300, scrolling=True)
 
 
 
@@ -149,6 +153,7 @@ def render_audit():
                             render_diff(before, after)
 
                     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
