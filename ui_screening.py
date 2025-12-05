@@ -72,17 +72,21 @@ def plot_radar_chart(values, labels, title):
     values = values + values[:1]
     angles = angles + angles[:1]
 
-    fig, ax = plt.subplots(figsize=(4, 4), subplot_kw=dict(polar=True))
+    fig, ax = plt.subplots(figsize=(3,3), subplot_kw=dict(polar=True))
+    ax.set_aspect('equal')
 
-    ax.plot(angles, values, linewidth=2, linestyle="solid")
+    ax.plot(angles, values, linewidth=2, linestyle='solid')
     ax.fill(angles, values, alpha=0.25)
 
     ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_yticklabels([])
-    ax.set_title(title, fontsize=12, pad=18)
+    ax.set_xticklabels(labels, fontsize=8)
 
+    ax.set_yticklabels([])
+    ax.set_title(title, fontsize=10, pad=10)
+
+    plt.tight_layout(pad=0.4)
     st.pyplot(fig)
+
 
 
 # ============================================
@@ -241,3 +245,4 @@ def render_screening():
         f"🌟 Kandidat terkuat di filter ini: **{best['full_name']} ({best['employee_id']})** "
         f"dengan TRI **{best['TRI']}**."
     )
+
