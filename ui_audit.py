@@ -1,10 +1,13 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import json
 import ast
-import streamlit.components.v1 as components
 from db import get_conn
 
+# ======================
+# SAFETY JSON PARSER
+# ======================
 def safe_json(raw):
     if raw in [None, "", "null"]:
         return {}
@@ -16,6 +19,10 @@ def safe_json(raw):
         except:
             return {}
 
+
+# ======================
+# BUILD DIFF LIST
+# ======================
 def build_diffs(before, after):
     fields = sorted(set(before.keys()) | set(after.keys()))
     diffs = []
@@ -24,6 +31,10 @@ def build_diffs(before, after):
             diffs.append({"field": f, "before": before.get(f), "after": after.get(f)})
     return diffs
 
+
+# ======================
+# MINIMAL TABLE (BEFORE | AFTER)
+# ======================
 def render_diff(before, after):
     diffs = build_diffs(before, after)
 
@@ -80,24 +91,21 @@ def render_diff(before, after):
     </html>
     """
 
-    # Render menggunakan iframe (100% berhasil)
     components.html(table_html, height=300, scrolling=True)
 
 
-
-
+# ======================
+# INSERT DATA RENDERING
+# ======================
 def render_insert(after):
-    st.markdown("<div style='font-weight:600; margin-bottom:6px;'>Data Baru:</div>", unsafe_allow_html=True)
-
+    st.markdown("### Data Baru:")
     for k, v in after.items():
-        st.markdown(f"""
-        <div style="margin-bottom:8px; padding-left:4px;">
-            <div style="font-size:13px; font-weight:600;">{k}</div>
-            <div style="font-size:12px; color:#000;">{v}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"**{k}:** {v}")
 
 
+# ======================
+# MAIN AUDIT TRAIL UI
+# ======================
 def render_audit():
     st.subheader("Audit Trail")
 
@@ -111,20 +119,20 @@ def render_audit():
 
     df["date"] = df["action_time"].str[:10]
 
-    # CONFIG: jumlah kolom (4 sama seperti contoh Anda)
-    NUM_COLS = 4
+    NUM_COLS = 4  # jumlah card per baris
 
     for date, group in df.groupby("date"):
         st.markdown(f"### {date}")
 
         rows = group.to_dict("records")
 
-        # Buat grid berdasarkan jumlah kolom
+        # Render grid card
         for i in range(0, len(rows), NUM_COLS):
             cols = st.columns(NUM_COLS)
 
             for idx, row in enumerate(rows[i:i+NUM_COLS]):
                 with cols[idx]:
+                    # CARD
                     st.markdown(
                         """
                         <div style="
@@ -138,27 +146,32 @@ def render_audit():
                         unsafe_allow_html=True
                     )
 
+                    # TITLE
                     st.markdown(
-                        f"**{row['action_type']} — {row['employee_id']}**  \n"
-                        f"<span style='font-size:12px;color:#666;'>User: {row['user_role']} · Waktu: {row['action_time'][11:19]}</span>",
+                        f"<div style='font-weight:600; font-size:14px;'>{row['action_type']} — {row['employee_id']}</div>",
                         unsafe_allow_html=True
                     )
 
+                    # USER INFO
+                    st.markdown(
+                        f"""
+                        <div style='font-size:12px;color:#666;'>
+                            User: <b>{row.get('username', 'UNKNOWN')}</b> ({row['user_role']})<br>
+                            Waktu: {row['action_time'][11:19]}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    # DETAIL EXPANDER
                     with st.expander("Detail"):
                         before = safe_json(row["before_data"])
                         after = safe_json(row["after_data"])
+
                         if row["action_type"] == "INSERT":
                             render_insert(after)
                         else:
                             render_diff(before, after)
 
+                    # CLOSE CARD
                     st.markdown("</div>", unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
