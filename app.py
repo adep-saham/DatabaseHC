@@ -29,14 +29,37 @@ menu = st.sidebar.radio(
     ]
 )
 
-# ===============================
-# SIDEBAR USERNAME
-# ===============================
-st.sidebar.title("User Login")
-username = st.sidebar.text_input("Username:", placeholder="Masukkan username Anda")
+# ======================
+# SIMPLE LOGIN SYSTEM
+# ======================
 
-if not username:
-    st.sidebar.warning("Masukkan username untuk melanjutkan.")
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+st.sidebar.title("User Login")
+
+if not st.session_state.logged_in:
+    # Input username sebelum login
+    username_input = st.sidebar.text_input("Username:", key="username_input")
+
+    # Tombol LOGIN
+    if st.sidebar.button("LOGIN"):
+        if username_input.strip() == "":
+            st.sidebar.error("Username tidak boleh kosong.")
+        else:
+            st.session_state.username = username_input.strip()
+            st.session_state.logged_in = True
+            st.sidebar.success(f"Login berhasil sebagai {st.session_state.username}")
+else:
+    # Jika sudah login → tampilkan info & tombol logout
+    st.sidebar.success(f"Logged in as: {st.session_state.username}")
+    if st.sidebar.button("LOGOUT"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.experimental_rerun()
+
 
 
 # ============================
@@ -80,4 +103,5 @@ elif menu == "Data Quality Dashboard":
 
 elif menu == "Audit Trail":
     render_audit()
+
 
