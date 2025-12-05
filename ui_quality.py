@@ -16,7 +16,23 @@ def render_quality():
         return
 
     # ==========================================
-    # 1. RUN PIPELINE (data_quality + anomaly + gap + TRI)
+    # Tambahkan kolom yang wajib ada di pipeline
+    # ==========================================
+    REQUIRED_COLUMNS = [
+        "years_in_department",
+        "years_in_bureau",
+        "avg_perf_3yr",
+        "technical_skills",
+        "soft_skills",
+        "certifications"
+    ]
+
+    for col in REQUIRED_COLUMNS:
+        if col not in df.columns:
+            df[col] = None
+
+    # ==========================================
+    # RUN PIPELINE
     # ==========================================
     required_skills = {
         "technical": ["HCIS", "SQL", "SAP"],
@@ -26,46 +42,45 @@ def render_quality():
     df_processed, insights = run_data_strategist_pipeline(df, required_skills)
 
     # ==========================================
-    # 2. DISPLAY SUMMARY METRICS
+    # SUMMARY METRICS
     # ==========================================
     col1, col2, col3 = st.columns(3)
 
-    col1.metric("📉 Rata-rata Data Quality Score", 
+    col1.metric("📉 Rata-rata Data Quality Score",
                 round(df_processed["data_quality_score_adv"].mean(), 1))
 
-    col2.metric("⚠️ Jumlah Anomali", 
+    col2.metric("⚠️ Jumlah Anomali",
                 (df_processed["anomaly_flag"] != "OK").sum())
 
-    col3.metric("⭐ Kandidat Siap (TRI ≥ 75)", 
+    col3.metric("⭐ Kandidat Siap (TRI ≥ 75)",
                 (df_processed["talent_readiness_index"] >= 75).sum())
 
     st.markdown("---")
 
     # ==========================================
-    # 3. TABLE DATA QUALITY
+    # TABEL
     # ==========================================
     st.markdown("### 📊 Tabel Data Kualitas Pegawai")
     st.dataframe(df_processed[
-        ["employee_id","full_name",
+        ["employee_id", "full_name",
          "data_quality_score_adv", "anomaly_flag",
-         "competency_gap_score","talent_readiness_index"]
-    ])
+         "competency_gap_score", "talent_readiness_index"]
+    ], use_container_width=True)
 
     # ==========================================
-    # 4. ANOMALY SECTION
+    # ANOMALI
     # ==========================================
     st.markdown("### 🚨 Anomali Data")
     anomaly_df = df_processed[df_processed["anomaly_flag"] != "OK"]
 
     if anomaly_df.empty:
-        st.success("Tidak ada anomali. Data konsisten! 🎉")
+        st.success("Tidak ada anomali. Data sangat baik! 🎉")
     else:
-        st.dataframe(anomaly_df[["employee_id","full_name","anomaly_flag"]])
+        st.dataframe(anomaly_df[["employee_id", "full_name", "anomaly_flag"]])
 
     # ==========================================
-    # 5. INSIGHTS
+    # INSIGHTS
     # ==========================================
     st.markdown("### 💡 HC Insights (Automated)")
-
     for i in insights:
         st.write(i)
