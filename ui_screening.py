@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from math import pi
-
+import plotly.graph_objects as go
 from db import get_conn
 
 
@@ -63,34 +63,32 @@ def compute_TRI(row):
 # ==========================================================
 # RADAR CHART MINI (FIGSIZE SMALL, PROPORTIONAL)
 # ==========================================================
-def plot_radar_chart(values, labels, title):
 
-    N = len(values)
-    angles = [n / float(N) * 2 * pi for n in range(N)]
-    values = values + values[:1]
-    angles = angles + angles[:1]
+def plot_radar_chart(labels, values, title):
 
-    # MINI FIGURE
-    fig, ax = plt.subplots(
-        figsize=(2.2, 2.2),      # << COMPACT & PROPORTIONAL
-        dpi=80,
-        subplot_kw=dict(polar=True)
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatterpolar(
+        r=values,
+        theta=labels,
+        fill='toself',
+        name=title,
+        line=dict(color="royalblue")
+    ))
+
+    fig.update_layout(
+        title=title,
+        width=350,   # << UKURAN FIXED & KECIL
+        height=350,  # << TIDAK AKAN MELAR
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 100])
+        ),
+        showlegend=False,
+        margin=dict(l=20, r=20, t=40, b=20)
     )
 
-    ax.set_aspect('equal')
+    st.plotly_chart(fig, use_container_width=False)
 
-    ax.plot(angles, values, linewidth=1.4, linestyle="solid")
-    ax.fill(angles, values, alpha=0.25)
-
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(labels, fontsize=8)
-
-    ax.set_yticklabels([])
-
-    ax.set_title(title, fontsize=10, pad=10)
-
-    plt.tight_layout(pad=0.2)
-    st.pyplot(fig)
 
 
 # ==========================================================
@@ -227,3 +225,4 @@ def render_screening():
         f"🌟 Kandidat terbaik (berdasarkan filter): **{best['full_name']} ({best['employee_id']})** "
         f"dengan TRI: **{best['TRI']}**."
     )
+
