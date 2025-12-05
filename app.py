@@ -29,6 +29,16 @@ menu = st.sidebar.radio(
     ]
 )
 
+# ===============================
+# SIDEBAR USERNAME
+# ===============================
+st.sidebar.title("User Login")
+username = st.sidebar.text_input("Username:", placeholder="Masukkan username Anda")
+
+if not username:
+    st.sidebar.warning("Masukkan username untuk melanjutkan.")
+
+
 # ============================
 # SPECIAL TOOLS for HC SYSTEM
 # ============================
@@ -70,3 +80,4 @@ elif menu == "Data Quality Dashboard":
 
 elif menu == "Audit Trail":
     render_audit()
+
