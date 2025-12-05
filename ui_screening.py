@@ -68,23 +68,31 @@ def compute_TRI(row):
 def plot_radar_chart(values, labels, title):
     N = len(values)
 
+    # Sudut radar
     angles = [n / float(N) * 2 * pi for n in range(N)]
     values = values + values[:1]
     angles = angles + angles[:1]
 
-    fig, ax = plt.subplots(figsize=(3,3), subplot_kw=dict(polar=True))
-    ax.set_aspect('equal')
+    # Figure lebih kecil dan proporsional
+    fig, ax = plt.subplots(figsize=(3, 3), subplot_kw=dict(polar=True))
+    ax.set_aspect('equal')  # ==> BIAR PROPORSIONAL
 
+    # Plot radar
     ax.plot(angles, values, linewidth=2, linestyle='solid')
     ax.fill(angles, values, alpha=0.25)
 
+    # Label
     ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_xticklabels(labels, fontsize=9)
 
     ax.set_yticklabels([])
-    ax.set_title(title, fontsize=10, pad=10)
 
-    plt.tight_layout(pad=0.4)
+    # Judul
+    ax.set_title(title, fontsize=12, pad=15)
+
+    # Layout rapat supaya tidak melebar
+    plt.tight_layout(pad=0.3)
+
     st.pyplot(fig)
 
 
@@ -245,4 +253,5 @@ def render_screening():
         f"🌟 Kandidat terkuat di filter ini: **{best['full_name']} ({best['employee_id']})** "
         f"dengan TRI **{best['TRI']}**."
     )
+
 
