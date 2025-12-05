@@ -5,11 +5,12 @@ import json
 import ast
 from db import get_conn
 
-# ======================
-# SAFETY JSON PARSER
-# ======================
+
+# ======================================================
+# SAFE JSON CONVERTER
+# ======================================================
 def safe_json(raw):
-    if raw in [None, "", "null"]:
+    if raw in (None, "", "null"):
         return {}
     try:
         return json.loads(raw)
@@ -20,31 +21,43 @@ def safe_json(raw):
             return {}
 
 
-# ======================
-# BUILD DIFF LIST
-# ======================
+# ======================================================
+# BUILD DIFF FIELDS
+# ======================================================
 def build_diffs(before, after):
     fields = sorted(set(before.keys()) | set(after.keys()))
     diffs = []
     for f in fields:
         if before.get(f) != after.get(f):
-            diffs.append({"field": f, "before": before.get(f), "after": after.get(f)})
+            diffs.append({
+                "field": f,
+                "before": before.get(f),
+                "after": after.get(f)
+            })
     return diffs
 
 
-# ======================
-# MINIMAL TABLE (BEFORE | AFTER)
-# ======================
-def render_diff(before, after):
-    diffs = build_diffs(before, after)
+# ======================================================
+# RENDER DIFF (2 Kolom) + info user pengubah
+# ======================================================
+def render_diff(before, after, username, role, action_time):
 
+    st.markdown("### Perubahan Field:")
+
+    # Tambahkan informasi siapa yang mengubah
+    st.markdown(f"""
+        <div style='font-size:13px; margin-bottom:14px; line-height:1.4;'>
+            <b>User pengubah:</b> {username} ({role})<br>
+            <b>Waktu update:</b> {action_time[11:19]}
+        </div>
+    """, unsafe_allow_html=True)
+
+    diffs = build_diffs(before, after)
     if not diffs:
         st.info("Tidak ada perubahan field.")
         return
 
-    st.markdown("### Perubahan Field:")
-
-    # Build full HTML table
+    # Tabel HTML
     table_html = """
     <html>
     <head>
@@ -59,7 +72,6 @@ def render_diff(before, after):
             padding: 6px 8px;
             border-bottom: 1px solid #ccc;
             text-align: left;
-            font-weight: 600;
         }
         td {
             padding: 6px 8px;
@@ -94,20 +106,30 @@ def render_diff(before, after):
     components.html(table_html, height=300, scrolling=True)
 
 
-# ======================
-# INSERT DATA RENDERING
-# ======================
-def render_insert(after):
+# ======================================================
+# RENDER INSERT DATA BARU
+# ======================================================
+def render_insert(after, username, role, action_time):
+
     st.markdown("### Data Baru:")
+
+    st.markdown(f"""
+        <div style='font-size:13px; margin-bottom:14px; line-height:1.4;'>
+            <b>User input:</b> {username} ({role})<br>
+            <b>Waktu input:</b> {action_time[11:19]}
+        </div>
+    """, unsafe_allow_html=True)
+
     for k, v in after.items():
-        st.markdown(f"**{k}:** {v}")
+        st.markdown(f"**{k}**: {v}")
 
 
-# ======================
-# MAIN AUDIT TRAIL UI
-# ======================
+# ======================================================
+# RENDER AUDIT TRAIL (GRID CARD)
+# ======================================================
 def render_audit():
-    st.subheader("Audit Trail")
+
+    st.subheader("🕒 Audit Trail")
 
     conn = get_conn()
     df = pd.read_sql_query("SELECT * FROM audit_log ORDER BY action_time DESC", conn)
@@ -122,17 +144,18 @@ def render_audit():
     NUM_COLS = 4  # jumlah card per baris
 
     for date, group in df.groupby("date"):
-        st.markdown(f"### {date}")
+        st.markdown(f"## 📅 {date}")
 
         rows = group.to_dict("records")
 
-        # Render grid card
         for i in range(0, len(rows), NUM_COLS):
             cols = st.columns(NUM_COLS)
 
             for idx, row in enumerate(rows[i:i+NUM_COLS]):
+
                 with cols[idx]:
-                    # CARD
+
+                    # CARD HEADER
                     st.markdown(
                         """
                         <div style="
@@ -146,13 +169,12 @@ def render_audit():
                         unsafe_allow_html=True
                     )
 
-                    # TITLE
                     st.markdown(
                         f"<div style='font-weight:600; font-size:14px;'>{row['action_type']} — {row['employee_id']}</div>",
                         unsafe_allow_html=True
                     )
 
-                    # USER INFO
+                    # USER metadata
                     st.markdown(
                         f"""
                         <div style='font-size:12px;color:#666;'>
@@ -165,13 +187,24 @@ def render_audit():
 
                     # DETAIL EXPANDER
                     with st.expander("Detail"):
+
                         before = safe_json(row["before_data"])
                         after = safe_json(row["after_data"])
 
                         if row["action_type"] == "INSERT":
-                            render_insert(after)
+                            render_insert(
+                                after,
+                                row.get("username", "UNKNOWN"),
+                                row["user_role"],
+                                row["action_time"]
+                            )
                         else:
-                            render_diff(before, after)
+                            render_diff(
+                                before,
+                                after,
+                                row.get("username", "UNKNOWN"),
+                                row["user_role"],
+                                row["action_time"]
+                            )
 
-                    # CLOSE CARD
                     st.markdown("</div>", unsafe_allow_html=True)
