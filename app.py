@@ -40,7 +40,8 @@ def login_page():
         else:
             st.session_state.username = username_input.strip()
             st.session_state.logged_in = True
-            st.experimental_rerun()
+            st.rerun()     # FIX DI SINI
+
 
 
 # =====================================================
@@ -49,7 +50,8 @@ def login_page():
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.experimental_rerun()
+    st.rerun()     # FIX DI SINI
+
 
 
 # =====================================================
@@ -130,3 +132,4 @@ if not st.session_state.logged_in:
     login_page()
 else:
     main_menu()
+
