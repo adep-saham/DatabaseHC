@@ -5,7 +5,8 @@ from audit_engine import AuditTrail
 
 audit_engine = AuditTrail()
 
-def render_form(role):
+# Sekarang menerima role DAN username
+def render_form(role, username):
 
     st.subheader("📄 Input / Update Data Pegawai")
 
@@ -38,6 +39,9 @@ def render_form(role):
             "last_updated": datetime.now().isoformat()
         }
 
+        # ===========================
+        # UPDATE DATA
+        # ===========================
         if editing:
             cur.execute("""
                 UPDATE employees 
@@ -46,9 +50,14 @@ def render_form(role):
             """, (full_name, department, row["last_updated"], employee_id))
             conn.commit()
 
-            audit_engine.log_update(role, employee_id, old, row)
+            # AUDIT LOG: username + role
+            audit_engine.log_update(username, role, employee_id, old, row)
+
             st.success("Data berhasil di-update!")
 
+        # ===========================
+        # INSERT DATA BARU
+        # ===========================
         else:
             cur.execute("""
                 INSERT INTO employees (employee_id, full_name, department, last_updated)
@@ -56,7 +65,9 @@ def render_form(role):
             """, (employee_id, full_name, department, row["last_updated"]))
             conn.commit()
 
-            audit_engine.log_insert(role, employee_id, row)
+            # AUDIT LOG
+            audit_engine.log_insert(username, role, employee_id, row)
+
             st.success("Pegawai baru ditambahkan!")
 
     conn.close()
