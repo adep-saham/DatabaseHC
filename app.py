@@ -130,7 +130,7 @@ def main_menu():
             st.sidebar.success("Database berhasil direset!")
 
         if st.sidebar.button("🚀 Generate Dummy Employees"):
-            msg = generate_dummy_data(15)
+            msg = generate_dummy_data(50)
             st.sidebar.success(msg)
 
         if st.sidebar.button("♻ Optimize Database"):
@@ -162,3 +162,4 @@ if not st.session_state.logged_in:
     login_page()
 else:
     main_menu()
+
