@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import sqlite3
+
 from db import init_db
 from ui_form import render_form
 from ui_audit import render_audit
@@ -13,8 +15,30 @@ from generate_dummy_data import generate_dummy_data
 # ==========================================================
 st.set_page_config(page_title="HC Employee DB", layout="wide")
 
+
 # ==========================================================
-# LOGIN STATE
+# AUTO UPGRADE AUDIT TABLE (ADD username COLUMN IF NEEDED)
+# ==========================================================
+def auto_upgrade_audit_table():
+    conn = sqlite3.connect("hc_employee.db")
+    cur = conn.cursor()
+
+    # cek struktur tabel audit_log
+    cur.execute("PRAGMA table_info(audit_log)")
+    columns = [row[1] for row in cur.fetchall()]
+
+    # jika kolom username belum ada → tambahkan
+    if "username" not in columns:
+        cur.execute("ALTER TABLE audit_log ADD COLUMN username TEXT;")
+        conn.commit()
+
+    conn.close()
+
+auto_upgrade_audit_table()
+
+
+# ==========================================================
+# SESSION LOGIN STATE
 # ==========================================================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -22,12 +46,13 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
+
 # ==========================================================
 # ROLE MAPPING (username → role)
 # ==========================================================
 USER_ROLE_MAP = {
     "adep": "HC System Bureau Head",
-    # Anda bisa menambah user lain:
+    # tambahkan user lain jika diperlukan:
     # "budi": "HR Admin",
     # "siti": "Viewer",
 }
@@ -67,14 +92,13 @@ def logout():
 # ==========================================================
 def main_menu():
 
-    # Tentukan role berdasarkan username
     username = st.session_state.username
     role = USER_ROLE_MAP.get(username, DEFAULT_ROLE)
 
-    # Init DB
+    # memastikan DB ada
     init_db()
 
-    # ===================== SIDEBAR =====================
+    # ================ SIDEBAR USER INFO ==================
     st.sidebar.title("User Info")
     st.sidebar.success(f"👤 Login sebagai: {username}")
     st.sidebar.info(f"Role: **{role}**")
@@ -93,7 +117,7 @@ def main_menu():
         ]
     )
 
-    # =============== IF ROLE = HC SYSTEM BUREAU HEAD — ADD ADMIN TOOLS ===============
+    # ================ HC SYSTEM ADMIN TOOLS ==================
     if role == "HC System Bureau Head":
         st.sidebar.markdown("### 🛠 Database Tools")
 
@@ -110,13 +134,13 @@ def main_menu():
             st.sidebar.success(msg)
 
         if st.sidebar.button("♻ Optimize Database"):
-            import sqlite3
             conn = sqlite3.connect("hc_employee.db")
             conn.execute("VACUUM")
             conn.close()
             st.sidebar.success("Database optimized!")
 
-    # ===================== PAGE ROUTING =====================
+
+    # ===================== PAGE ROUTER =====================
 
     if menu == "Input / Update Data Pegawai":
         render_form(role, username)
@@ -132,7 +156,7 @@ def main_menu():
 
 
 # ==========================================================
-# RUN APP
+# RUN APPLICATION
 # ==========================================================
 if not st.session_state.logged_in:
     login_page()
