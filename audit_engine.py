@@ -32,7 +32,7 @@ class AuditTrail:
 
         cur.execute("""
             INSERT INTO audit_log
-            (action_time, user_role, action_type, employee_id, detail,
+            (action_time, username, user_role, action_type, employee_id, detail,
              before_data, after_data, ip_address)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -52,10 +52,11 @@ class AuditTrail:
     def log_insert(self, user_role, employee_id, after, ip="0.0.0.0"):
         self._write_db_log("INSERT", user_role, employee_id, "Insert employee", {}, after, ip)
 
-    def log_update(self, user_role, employee_id, before, after, ip="0.0.0.0"):
+    def log_update(self, username, user_role, employee_id, before, after, ip="0.0.0.0"):
         detail = json.dumps({
             k: {"before": before[k], "after": after[k]}
             for k in after if k in before and before[k] != after[k]
         }, ensure_ascii=False)
 
         self._write_db_log("UPDATE", user_role, employee_id, detail, before, after, ip)
+
