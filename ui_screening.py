@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from math import pi
 import plotly.graph_objects as go
 from db import get_conn
-
+import io
 
 # ==========================================================
 # SAFE VALUE HANDLERS
@@ -64,30 +64,38 @@ def compute_TRI(row):
 # RADAR CHART MINI (FIGSIZE SMALL, PROPORTIONAL)
 # ==========================================================
 
-def plot_radar_chart(labels, values, title):
+def plot_radar_chart(values, labels, title):
 
-    fig = go.Figure()
+    N = len(values)
+    angles = [n / float(N) * 2 * pi for n in range(N)]
+    values = values + values[:1]
+    angles = angles + angles[:1]
 
-    fig.add_trace(go.Scatterpolar(
-        r=values,
-        theta=labels,
-        fill='toself',
-        name=title,
-        line=dict(color="royalblue")
-    ))
+    # Figure mini
+    fig, ax = plt.subplots(figsize=(2, 2), dpi=80, subplot_kw=dict(polar=True))
+    ax.set_aspect("equal")
 
-    fig.update_layout(
-        title=title,
-        width=350,   # << UKURAN FIXED & KECIL
-        height=350,  # << TIDAK AKAN MELAR
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0, 100])
-        ),
-        showlegend=False,
-        margin=dict(l=20, r=20, t=40, b=20)
-    )
+    ax.plot(angles, values, linewidth=1.3)
+    ax.fill(angles, values, alpha=0.25)
 
-    st.plotly_chart(fig, use_container_width=False)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels, fontsize=7)
+
+    ax.set_yticklabels([])
+    ax.set_title(title, fontsize=9, pad=10)
+
+    plt.tight_layout(pad=0.1)
+
+    # ------------------------------
+    #  RENDER PNG MINI AGAR TIDAK DI-RESCALE STREAMLIT
+    # ------------------------------
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=90, bbox_inches="tight")
+    buf.seek(0)
+    plt.close(fig)
+
+    st.image(buf, width=220)   # << INI MENGUNCI UKURAN
+
 
 
 
@@ -225,4 +233,5 @@ def render_screening():
         f"🌟 Kandidat terbaik (berdasarkan filter): **{best['full_name']} ({best['employee_id']})** "
         f"dengan TRI: **{best['TRI']}**."
     )
+
 
