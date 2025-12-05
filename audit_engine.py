@@ -1,6 +1,16 @@
 import sqlite3
 import json
 from datetime import datetime
+import pytz
+
+# ============================================
+# TIMEZONE WIB FIX — 100% MATCH LAPTOP USER
+# ============================================
+WIB = pytz.timezone("Asia/Jakarta")
+
+def now_wib():
+    return datetime.now().astimezone(WIB).isoformat(timespec="seconds")
+
 
 class AuditTrail:
     def __init__(self, db_path="hc_employee.db", logfile="audit_log.txt"):
@@ -27,6 +37,10 @@ class AuditTrail:
         conn.commit()
         conn.close()
 
+
+    # =====================================================
+    # INTERNAL WRITE DB FUNCTION
+    # =====================================================
     def _write_db_log(self, action_time, username, user_role,
                       action_type, employee_id, detail, before, after, ip):
 
@@ -39,8 +53,12 @@ class AuditTrail:
              employee_id, detail, before_data, after_data, ip_address)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            action_time, username, user_role,
-            action_type, employee_id, detail,
+            action_time,
+            username,
+            user_role,
+            action_type,
+            employee_id,
+            detail,
             json.dumps(before, ensure_ascii=False),
             json.dumps(after, ensure_ascii=False),
             ip
@@ -49,19 +67,25 @@ class AuditTrail:
         conn.commit()
         conn.close()
 
-    # INSERT
+
+    # =====================================================
+    # INSERT LOG
+    # =====================================================
     def log_insert(self, username, user_role, employee_id, after, ip="0.0.0.0"):
-        action_time = datetime.now().isoformat(timespec="seconds")
+        action_time = now_wib()
+
         self._write_db_log(
             action_time, username, user_role,
             "INSERT", employee_id, "Insert employee",
             {}, after, ip
         )
 
-    # UPDATE
-    def log_update(self, username, user_role, employee_id, before, after, ip="0.0.0.0"):
 
-        action_time = datetime.now().isoformat(timespec="seconds")
+    # =====================================================
+    # UPDATE LOG
+    # =====================================================
+    def log_update(self, username, user_role, employee_id, before, after, ip="0.0.0.0"):
+        action_time = now_wib()
 
         detail = json.dumps({
             k: {"before": before[k], "after": after[k]}
